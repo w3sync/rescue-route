@@ -1,65 +1,82 @@
-import type { Request } from "express";
+import type { Request, Response } from "express";
 
 import { createVerifier } from "fast-jwt";
 
 import { ApiError, asyncHandler, HttpStatus, Role } from "@/lib";
-import { Admin } from "@/modals/admin.modal";
+import { User } from "@/modals/user.modal";
 
-export const verifyAdmin = asyncHandler(async (req: Request, _, next) => {
+export const verifyAdmin = asyncHandler(async (req: Request, res: Response, next) => {
+  const token = req.cookies?.accessToken
+    || req.header("Authorization")?.replace("Bearer ", "");
+
+  if (!token) {
+    res.status(HttpStatus.UNAUTHORIZED).json(
+      new ApiError(HttpStatus.UNAUTHORIZED, "Unauthorized request"),
+    );
+    return;
+  }
+
+  const verify = createVerifier({
+    key: async () => process.env.ACCESS_TOKEN_SECRET,
+  });
+
   try {
-    const token
-      = req.cookies?.accessToken
-        || req.header("Authorization")?.replace("Bearer", "");
-
-    if (!token) {
-      throw new ApiError(HttpStatus.UNAUTHORIZED, "Unauthorized requrest");
-    }
-
-    const verify = createVerifier({
-      key: async () => process.env.ACCESS_TOKEN_SECRET,
-    });
-
     const decodedToken = await verify(token.trim());
-    const user = await Admin.findById(decodedToken._id);
+    const user = await User.findById(decodedToken._id);
 
     if (!user || user.role !== Role.ADMIN) {
-      throw new ApiError(401, "Invalid Access Token");
+      res.status(HttpStatus.UNAUTHORIZED)
+        .clearCookie("accessToken")
+        .clearCookie("refreshToken")
+        .json(new ApiError(HttpStatus.UNAUTHORIZED, "Invalid Access Token"));
+      return;
     }
 
     req.user = user;
     next();
   }
   catch (error) {
-    throw new ApiError(HttpStatus.UNAUTHORIZED, "Invalid Access Token", error as undefined);
+    res.status(HttpStatus.UNAUTHORIZED)
+      .clearCookie("accessToken")
+      .clearCookie("refreshToken")
+      .json(new ApiError(HttpStatus.UNAUTHORIZED, "Invalid Access Token"));
   }
 });
 
-export const verifyUser = asyncHandler(async (req: Request, _, next) => {
+export const verifyUser = asyncHandler(async (req: Request, res: Response, next) => {
+  const token = req.cookies?.accessToken
+    || req.header("Authorization")?.replace("Bearer ", "");
+
+  if (!token) {
+    res.status(HttpStatus.UNAUTHORIZED).json(
+      new ApiError(HttpStatus.UNAUTHORIZED, "Unauthorized request"),
+    );
+    return;
+  }
+
+  const verify = createVerifier({
+    key: async () => process.env.ACCESS_TOKEN_SECRET,
+  });
+
   try {
-    const token
-      = req.cookies?.accessToken
-        || req.header("Authorization")?.replace("Bearer", "");
+    const decodedToken = await verify(token.trim());
+    const user = await User.findById(decodedToken._id);
 
-    if (!token) {
-      throw new ApiError(HttpStatus.UNAUTHORIZED, "Unauthorized requrest");
-    }
-
-    const verify = createVerifier({
-      key: async () => process.env.ACCESS_TOKEN_SECRET,
-    });
-
-    const decodedToken = await verify(token);
-
-    const user = await Admin.findById(decodedToken?._id);
-
-    if (!user) {
-      throw new ApiError(401, "Invalid Access Token");
+    if (!user || user.role !== Role.USER) {
+      res.status(HttpStatus.UNAUTHORIZED)
+        .clearCookie("accessToken")
+        .clearCookie("refreshToken")
+        .json(new ApiError(HttpStatus.UNAUTHORIZED, "Invalid Access Token"));
+      return;
     }
 
     req.user = user;
     next();
   }
   catch (error) {
-    throw new ApiError(HttpStatus.UNAUTHORIZED, "Invalid Access Token", error as undefined);
+    res.status(HttpStatus.UNAUTHORIZED)
+      .clearCookie("accessToken")
+      .clearCookie("refreshToken")
+      .json(new ApiError(HttpStatus.UNAUTHORIZED, "Invalid Access Token"));
   }
 });

@@ -2,10 +2,10 @@ import type { NextFunction, Request, Response } from "express";
 
 import { createVerifier } from "fast-jwt";
 
-import type { IAdmin } from "@/modals/admin.modal";
+import type { IUser } from "@/modals/user.modal";
 
 import { ApiError, ApiResponse, asyncHandler, cookieOptions, HttpStatus, Role } from "@/lib";
-import { Admin } from "@/modals/admin.modal";
+import { User } from "@/modals/user.modal";
 
 function removeSenstiveData(registeredUser: any) {
   const registeredUserWithoutPasswrod = registeredUser.toObject() as any;
@@ -45,14 +45,14 @@ export const adminRegister = asyncHandler(async (req: Request, res: Response, ne
     email,
     phone,
     password,
-  }: Partial<IAdmin> = req.body;
+  }: Partial<IUser> = req.body;
 
   if ([firstName, middleName, lastName, email, phone, password].some(field => field?.trim() === "")) {
     return res.status(HttpStatus.BAD_REQUEST).json(new ApiError(HttpStatus.BAD_REQUEST, "Every fields are requried"));
   }
 
   try {
-    const alreadyUser = await Admin.findOne({
+    const alreadyUser = await User.findOne({
       email,
     });
 
@@ -60,8 +60,8 @@ export const adminRegister = asyncHandler(async (req: Request, res: Response, ne
       return res.status(HttpStatus.CONFLICT).json(new ApiResponse(HttpStatus.CONFLICT, null, "Already an User exist with that credientals"));
     }
 
-    // Create a new instance of Admin but don't save it yet
-    const user = new Admin({
+    // Create a new instance of User but don't save it yet
+    const user = new User({
       phone,
       password,
       firstName: firstName?.toLowerCase(),
@@ -78,7 +78,7 @@ export const adminRegister = asyncHandler(async (req: Request, res: Response, ne
     // If validation passes, save the user
     let registeredUser = await user.save();
     registeredUser = removeSenstiveData(registeredUser);
-    return res.status(HttpStatus.CREATED).json(new ApiResponse(HttpStatus.CREATED, registeredUser, "Admin created Sucessfully"));
+    return res.status(HttpStatus.CREATED).json(new ApiResponse(HttpStatus.CREATED, registeredUser, "User created Sucessfully"));
   }
   catch (error: any) {
     if (error.name === "ValidationError") {
@@ -101,7 +101,7 @@ export const adminLogin = asyncHandler(async (req: Request, res: Response) => {
   }
 
   try {
-    const user = await Admin.findOne({
+    const user = await User.findOne({
       email,
     }).select("+password");
 
@@ -131,13 +131,13 @@ export const adminLogin = asyncHandler(async (req: Request, res: Response) => {
 });
 
 export const adminLogout = asyncHandler(async (req: Request, res: Response) => {
-  await Admin.findByIdAndUpdate(req?.user._id, {
+  await User.findByIdAndUpdate(req?.user._id, {
     $unset: {
       refreshToken: "",
     },
   });
 
-  return res.status(HttpStatus.OK).clearCookie("accessToken").clearCookie("refreshToken").json(new ApiResponse(HttpStatus.OK, null, "Admin Logged Out."));
+  return res.status(HttpStatus.OK).clearCookie("accessToken").clearCookie("refreshToken").json(new ApiResponse(HttpStatus.OK, null, "User Logged Out."));
 });
 
 export const adminRefreshAccessToken = asyncHandler(async (req: Request, res: Response) => {
@@ -155,7 +155,7 @@ export const adminRefreshAccessToken = asyncHandler(async (req: Request, res: Re
 
     const decodedToken = await verify(incomingRefreshToken);
 
-    const user = await Admin.findById(decodedToken._id);
+    const user = await User.findById(decodedToken._id);
 
     if (!user) {
       throw new ApiError(HttpStatus.UNAUTHORIZED, "Invalid refresh Token");
@@ -195,7 +195,7 @@ export const adminChangePassword = asyncHandler(async (req: Request, res: Respon
     return res.status(HttpStatus.BAD_REQUEST).json(new ApiResponse(HttpStatus.BAD_REQUEST, null, "All fields are required."));
   }
 
-  const user = await Admin.findById(req.user._id).select("+password");
+  const user = await User.findById(req.user._id).select("+password");
 
   if (!user) {
     return res.status(HttpStatus.NOT_FOUND).json(new ApiError(HttpStatus.BAD_REQUEST, "User not found."));
@@ -216,7 +216,7 @@ export const adminChangePassword = asyncHandler(async (req: Request, res: Respon
 });
 
 export const adminUpdateAccountDetails = asyncHandler(async (req: Request, res: Response) => {
-  const { firstName, lastName, middleName, phone, email }: Partial<IAdmin> = req.body;
+  const { firstName, lastName, middleName, phone, email }: Partial<IUser> = req.body;
 
   const filteredValues = Object.fromEntries(
     Object.entries({ firstName, lastName, middleName, phone, email }).filter(
@@ -224,7 +224,7 @@ export const adminUpdateAccountDetails = asyncHandler(async (req: Request, res: 
     ),
   );
 
-  const user = await Admin.findByIdAndUpdate(
+  const user = await User.findByIdAndUpdate(
     req.user?._id,
     {
       $set: filteredValues,
@@ -254,13 +254,13 @@ export const adminDeleteUser = asyncHandler(async (req: Request, res: Response) 
     return res.status(HttpStatus.BAD_REQUEST).json(new ApiResponse(HttpStatus.BAD_REQUEST, null, "id doesn't exists."));
   }
 
-  const isUser = await Admin.findById(id);
+  const isUser = await User.findById(id);
 
   if (!isUser) {
     return res.status(HttpStatus.NOT_FOUND).json(new ApiResponse(HttpStatus.NOT_FOUND, null, "no user exists with that id."));
   }
 
-  await Admin.findByIdAndDelete(id);
+  await User.findByIdAndDelete(id);
 
   return res.status(HttpStatus.ACCEPTED).json(new ApiResponse(HttpStatus.ACCEPTED, null, "user is deleted"));
 });

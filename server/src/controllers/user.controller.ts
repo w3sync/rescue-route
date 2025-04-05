@@ -56,7 +56,7 @@ export const userRegister = asyncHandler(async (req: Request, res: Response, nex
       return res.status(HttpStatus.BAD_REQUEST).json(new ApiError(HttpStatus.BAD_REQUEST, "Validation error", validationErrors));
     }
 
-    return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json(new ApiError(HttpStatus.INTERNAL_SERVER_ERROR, "Server not responde"));
+    return res.status(HttpStatus.INTERNAL_SERVER_ERROR).json(new ApiError(HttpStatus.INTERNAL_SERVER_ERROR, "Server not responde", error));
   }
 });
 

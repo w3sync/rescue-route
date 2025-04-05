@@ -64,7 +64,6 @@ export const userSchema = new Schema<IUser>(
     phone: {
       type: String,
       required: [true, "Phone number is required"],
-      unique: true,
       match: [/^(\+91)?[6-9]\d{9}$/, "Invalid Indian phone number format"],
     },
     role: {
